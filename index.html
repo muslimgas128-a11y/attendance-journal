@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Журнал посещаемости</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 700px; margin: auto; padding: 16px; background: #f5f6f8; color: #17202a; }
+    h1 { font-size: 24px; }
+    section, .student { background: white; padding: 14px; border-radius: 12px; margin: 12px 0; }
+    input, select, button { font: inherit; padding: 10px; border: 1px solid #bbc2cc; border-radius: 8px; }
+    input[type="text"] { box-sizing: border-box; width: 100%; margin: 8px 0; }
+    button { background: #1769d2; color: white; border: 0; margin: 4px 4px 4px 0; }
+    button.delete { background: #b42318; }
+    .student { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .student span { overflow-wrap: anywhere; }
+    small { color: #59636f; }
+  </style>
+</head>
+<body>
+  <h1>Журнал посещаемости</h1>
+
+  <section>
+    <label for="date">Дата занятия:</label>
+    <input id="date" type="date">
+    <p><small>Отметки сохраняются отдельно для каждой даты.</small></p>
+  </section>
+
+  <section>
+    <h2>Добавить студента</h2>
+    <input id="name" type="text" placeholder="Имя и фамилия">
+    <button id="add">Добавить</button>
+  </section>
+
+  <section>
+    <h2>Студенты и посещаемость</h2>
+    <div id="list"></div>
+  </section>
+
+  <section>
+    <h2>Резервная копия</h2>
+    <button id="export">Скачать копию</button>
+    <label>
+      <button type="button">Загрузить копию</button>
+      <input id="import" type="file" accept="application/json,.json" hidden>
+    </label>
+    <p><small>Периодически сохраняйте копию, чтобы не потерять журнал при сбросе или замене телефона.</small></p>
+  </section>
+
+<script>
+  const KEY = "attendance-journal-v1";
+  const today = new Date().toISOString().slice(0, 10);
+  const dateInput = document.querySelector("#date");
+  const list = document.querySelector("#list");
+
+  dateInput.value = today;
+
+  function loadData() {
+    try {
+      return JSON.parse(localStorage.getItem(KEY)) || { students: [], marks: {} };
+    } catch {
+      return { students: [], marks: {} };
+    }
+  }
+
+  let data = loadData();
+
+  function save() {
+    localStorage.setItem(KEY, JSON.stringify(data));
+  }
+
+  function render() {
+    list.replaceChildren();
+    const date = dateInput.value;
+
+    if (data.students.length === 0) {
+      list.textContent = "Пока нет студентов. Добавьте первого выше.";
+      return;
+    }
+
+    for (const student of data.students) {
+      const row = document.createElement("div");
+      row.className = "student";
+
+      const name = document.createElement("span");
+      name.textContent = student.name;
+
+      const select = document.createElement("select");
+      for (const [value, label] of [
+        ["present", "Присутствовал"],
+        ["absent", "Отсутствовал"],
+        ["excused", "Уважительная причина"],
+        ["", "Не отмечено"]
+      ]) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.append(option);
+      }
+
+      select.value = data.marks[date]?.[student.id] || "";
+      select.addEventListener("change", () => {
+        data.marks[date] ||= {};
+        if (select.value) data.marks[date][student.id] = select.value;
+        else delete data.marks[date][student.id];
+        save();
+      });
+
+      const remove = document.createElement("button");
+      remove.className = "delete";
+      remove.textContent = "Удалить";
+      remove.addEventListener("click", () => {
+        if (!confirm(`Удалить студента «${student.name}» и его отметки?`)) return;
+        data.students = data.students.filter(s => s.id !== student.id);
+        for (const day of Object.values(data.marks)) delete day[student.id];
+        save();
+        render();
+      });
+
+      row.append(name, select, remove);
+      list.append(row);
+    }
+  }
+
+  document.querySelector("#add").addEventListener("click", () => {
+    const input = document.querySelector("#name");
+    const name = input.value.trim();
+    if (!name) return alert("Введите имя студента.");
+    data.students.push({ id: crypto.randomUUID(), name });
+    input.value = "";
+    save();
+    render();
+  });
+
+  dateInput.addEventListener("change", render);
+
+  document.querySelector("#export").addEventListener("click", () => {
+    const file = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(file);
+    link.download = "zhurnal-rezervnaya-kopiya.json";
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  document.querySelector("#import").addEventListener("change", async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const imported = JSON.parse(await file.text());
+      if (!Array.isArray(imported.students) || typeof imported.marks !== "object") {
+        throw new Error("Неверный формат файла");
+      }
+      if (!confirm("Заменить текущий журнал данными из копии?")) return;
+      data = imported;
+      save();
+      render();
+      alert("Копия загружена.");
+    } catch {
+      alert("Не удалось загрузить файл. Выберите копию, созданную этим журналом.");
+    } finally {
+      event.target.value = "";
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>
