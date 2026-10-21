@@ -2,297 +2,573 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Журнал посещаемости</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f5f9">
+  <title>ДГУ — Электронный журнал пропусков</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #f3f5f8;
-      --card: #fff;
-      --text: #17202a;
-      --muted: #59636f;
-      --border: #c8ced6;
-      --button: #1769d2;
-      --danger: #b42318;
+      --bg: #f3f5f9;
+      --surface: #fff;
+      --text: #202637;
+      --muted: #70798b;
+      --line: #e2e6ee;
+      --accent: #3157c8;
+      --accent-soft: #edf1ff;
+      --danger: #c8313b;
+      --shadow: 0 8px 26px rgba(27, 39, 72, .08);
     }
-
     body.dark {
       color-scheme: dark;
-      --bg: #111315;
-      --card: #1c2024;
-      --text: #f1f3f5;
-      --muted: #b0b8c1;
-      --border: #424950;
-      --button: #3478d4;
-      --danger: #c43b32;
+      --bg: #111522;
+      --surface: #1b2131;
+      --text: #edf0f8;
+      --muted: #a4adc0;
+      --line: #343c50;
+      --accent: #91a9ff;
+      --accent-soft: #283252;
+      --danger: #ff727c;
+      --shadow: 0 8px 26px rgba(0, 0, 0, .22);
     }
-
+    * { box-sizing: border-box; }
     body {
-      font: 16px system-ui, sans-serif;
-      max-width: 760px;
-      margin: auto;
-      padding: 16px;
+      margin: 0;
+      padding: 14px 14px calc(24px + env(safe-area-inset-bottom));
       background: var(--bg);
       color: var(--text);
+      font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-
-    h1 { font-size: 24px; }
-    h2 { font-size: 19px; }
-
-    section, .discipline {
-      background: var(--card);
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { max-width: 850px; margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .icon-button, .tool-button, .subject-button, .week-button {
+      border: 1px solid var(--line);
       color: var(--text);
-      padding: 14px;
+      background: var(--surface);
       border-radius: 12px;
+    }
+    .icon-button { width: 44px; height: 44px; font-size: 21px; }
+    .hero { text-align: center; padding: 10px 0 16px; }
+    .campus { display:block; width: min(100%, 340px); height: 100px; margin: 0 auto 5px; }
+    .hero h1 { margin: 0; font-size: 25px; letter-spacing: .08em; }
+    .hero p { margin: 2px 0 0; color: var(--muted); font-size: 16px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 15px;
       margin: 12px 0;
+      box-shadow: var(--shadow);
     }
-
-    input, select, button {
-      font: inherit;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      background: var(--card);
-    }
-
-    input[type="text"] {
-      box-sizing: border-box;
+    .controls { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 5px; }
+    input, select, textarea {
       width: 100%;
-      margin: 8px 0;
+      min-width: 0;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: var(--surface);
     }
-
-    button {
-      background: var(--button);
-      color: white;
-      border: 0;
-      margin: 4px 4px 4px 0;
+    input[type="date"] { min-height: 42px; }
+    .week-row { display:flex; gap:8px; margin-top:11px; }
+    .week-button { padding: 8px 13px; }
+    .week-button.active, .tool-button.primary {
+      background: var(--accent); color: #fff; border-color: var(--accent);
     }
-
-    button.danger { background: var(--danger); }
-
-    .student {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 8px 0;
-      border-top: 1px solid var(--border);
+    body.dark .week-button.active, body.dark .tool-button.primary { color:#111522; }
+    .toolbar { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+    .tool-button { padding: 10px 12px; font-size: 14px; }
+    .tool-button .emoji { font-size: 18px; margin-right: 5px; }
+    h2 { font-size: 17px; margin: 0 0 10px; }
+    h3 { font-size: 15px; margin: 14px 0 8px; }
+    .muted { color:var(--muted); }
+    .subject-list { display:flex; flex-wrap:wrap; gap:8px; }
+    .subject-button { padding:9px 12px; text-align:left; }
+    .subject-button.active { background:var(--accent-soft); border-color:var(--accent); }
+    .empty { color:var(--muted); padding:8px 0; }
+    .student-row {
+      display:grid; grid-template-columns:minmax(0, 1fr) minmax(145px, 190px);
+      gap:10px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line);
     }
-
-    .student span {
-      overflow-wrap: anywhere;
-      flex: 1;
+    .student-row:last-child { border-bottom:0; }
+    .student-name { min-width:0; line-height:1.22; }
+    .student-name .surname, .student-name .given { display:block; overflow-wrap:anywhere; }
+    .student-name .given { color:var(--muted); font-size:13px; }
+    .group-tag { font-size:11px; color:var(--muted); margin-top:3px; }
+    .schedule-day { border-top:1px solid var(--line); padding:10px 0; }
+    .schedule-day:first-of-type { border-top:0; }
+    .schedule-entry { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:5px 0; }
+    .schedule-entry span { overflow-wrap:anywhere; }
+    .small-button {
+      border:1px solid var(--line); background:var(--surface); color:var(--text);
+      border-radius:9px; padding:6px 9px; flex:0 0 auto;
     }
-
-    .discipline h3 { margin-top: 0; }
-    small { color: var(--muted); }
+    .footer-actions { display:grid; gap:8px; margin-top:18px; }
+    .footer-actions button { width:100%; }
+    .danger-button {
+      background:var(--danger); border:0; border-radius:11px; color:white;
+      padding:11px 14px;
+    }
+    .modal-backdrop {
+      position:fixed; inset:0; z-index:10; display:none; align-items:flex-end;
+      justify-content:center; background:rgba(0,0,0,.45); padding:12px;
+    }
+    .modal-backdrop.open { display:flex; }
+    .modal {
+      width:min(100%, 520px); max-height:88vh; overflow:auto;
+      background:var(--surface); color:var(--text); border-radius:18px;
+      padding:18px; box-shadow:var(--shadow);
+    }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .modal-head h2 { margin:0; }
+    .close-button { border:0; background:transparent; color:var(--text); font-size:25px; }
+    .form-stack { display:grid; gap:11px; margin-top:14px; }
+    .avatar-preview {
+      width:78px; height:78px; border-radius:50%; object-fit:cover;
+      background:var(--accent-soft); display:block; margin:10px auto;
+    }
+    .button-row { display:flex; gap:8px; margin-top:14px; }
+    .button-row > * { flex:1; }
+    .notice { font-size:13px; color:var(--muted); margin-top:8px; }
+    @media (min-width:650px) {
+      body { padding-top:24px; }
+      .modal-backdrop { align-items:center; }
+      .student-row { grid-template-columns:minmax(0, 1fr) 220px; }
+    }
   </style>
 </head>
-
 <body>
-  <h1>Журнал посещаемости</h1>
-  <button id="themeButton">Включить чёрную тему</button>
+<div class="app">
+  <header class="topbar">
+    <button class="icon-button" id="themeBtn" aria-label="Сменить тему" title="Сменить тему">☾</button>
+    <button class="icon-button" id="profileBtn" aria-label="Профиль" title="Профиль">👤</button>
+  </header>
 
-  <section>
-    <label for="date">Дата занятий:</label>
-    <input id="date" type="date">
-    <p><small>Отметки сохраняются отдельно для каждой даты и дисциплины.</small></p>
+  <section class="hero">
+    <svg class="campus" viewBox="0 0 360 110" role="img" aria-label="Иллюстрация университета">
+      <path d="M18 96h324M35 91V49h290v42M25 49 180 12 335 49H25Z" fill="#dce5ff" stroke="#3157c8" stroke-width="3"/>
+      <path d="M52 57h28v34H52zm57 0h28v34h-28zm57 0h28v34h-28zm57 0h28v34h-28zm57 0h28v34h-28z" fill="#fff" stroke="#3157c8" stroke-width="2"/>
+      <path d="M164 91V70a16 16 0 0 1 32 0v21" fill="#b8c8ff" stroke="#3157c8" stroke-width="2"/>
+      <path d="M180 11V3m-9 8h18" stroke="#3157c8" stroke-width="3"/>
+      <path d="M26 99h308" stroke="#3157c8" stroke-width="4"/>
+    </svg>
+    <h1>ДГУ</h1>
+    <p>Электронный журнал пропусков</p>
   </section>
 
-  <section>
-    <h2>Добавить студента</h2>
-    <input id="name" type="text" placeholder="Имя и фамилия">
-    <button id="addStudent">Добавить</button>
+  <section class="card">
+    <div class="controls">
+      <div>
+        <label for="selectedDate">Дата отметки</label>
+        <input id="selectedDate" type="date">
+      </div>
+      <div id="dateInfo" class="muted"></div>
+    </div>
+    <div class="week-row" aria-label="Выбор недели">
+      <button class="week-button" data-week="1">Первая неделя</button>
+      <button class="week-button" data-week="2">Вторая неделя</button>
+    </div>
+    <div class="notice">Неделя автоматически считается от 21 октября 2026 года: это среда второй недели. При необходимости неделю можно переключить вручную.</div>
   </section>
 
-  <div id="journals"></div>
-
-  <section>
-    <h2>Резервная копия</h2>
-    <button id="export">Скачать копию журнала</button>
-    <label>
-      <button type="button">Загрузить копию</button>
-      <input id="import" type="file" accept="application/json,.json" hidden>
-    </label>
-    <p><small>Сохраняйте копию время от времени, чтобы не потерять отметки.</small></p>
+  <section class="card">
+    <div class="toolbar">
+      <button class="tool-button" id="addStudentBtn"><span class="emoji">👤＋</span>Добавить ученика</button>
+      <button class="tool-button" id="addSubjectBtn"><span class="emoji">📖</span>Добавить дисциплину</button>
+      <button class="tool-button" id="scheduleBtn"><span class="emoji">📄</span>Расписание</button>
+    </div>
   </section>
+
+  <section class="card">
+    <h2 id="dayHeading">Занятия</h2>
+    <div class="subject-list" id="daySubjects"></div>
+  </section>
+
+  <section class="card" id="attendanceCard">
+    <h2 id="attendanceHeading">Выберите дисциплину</h2>
+    <div id="attendanceList" class="empty">Сначала выберите дисциплину выше.</div>
+  </section>
+
+  <section class="card">
+    <h2>Резервные копии</h2>
+    <div class="footer-actions">
+      <button class="tool-button" id="exportMonth">Сохранить копию пропусков за месяц</button>
+      <button class="tool-button" id="exportAll">Сохранить копию за всё время</button>
+      <button class="tool-button" id="exportDate">Сохранить выбранную дату</button>
+      <button class="danger-button" id="clearAll">Очистить все данные</button>
+    </div>
+    <div class="notice">Данные хранятся только в этом браузере на телефоне. Экспортируйте резервную копию, чтобы не потерять журнал.</div>
+  </section>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle"></h2>
+      <button class="close-button" id="closeModal" aria-label="Закрыть">×</button>
+    </div>
+    <div id="modalContent"></div>
+  </section>
+</div>
 
 <script>
-  const KEY = "attendance-journal-v2";
-  const THEME_KEY = "attendance-journal-theme";
+(() => {
+  "use strict";
+  const STORAGE_KEY = "dguAttendanceJournal_v1";
+  const DAYS = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+  const DEFAULT = {
+    theme: "light",
+    profile: { photo: "", fullName: "", direction: "" },
+    students: [],
+    subjects: [],
+    schedule: { "1": {}, "2": {} },
+    attendance: {}
+  };
 
-  const disciplines = [
-    "Английский язык",
-    "VBA",
-    "ИТиП",
-    "Алгоритмы",
-    "ИСиТ",
-    "Математика",
-    "ОРГ",
-    "История",
-    "Python",
-    "ТАиОД",
-    "Русский язык"
-  ];
-
-  const dateInput = document.querySelector("#date");
-  const journals = document.querySelector("#journals");
-  dateInput.value = new Date().toISOString().slice(0, 10);
+  let data = loadData();
+  let selectedSubjectId = "";
+  let manualWeek = null;
 
   function loadData() {
     try {
-      return JSON.parse(localStorage.getItem(KEY)) || {
-        students: [],
-        marks: {}
-      };
-    } catch {
-      return { students: [], marks: {} };
-    }
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return saved ? { ...structuredClone(DEFAULT), ...saved,
+        profile: { ...DEFAULT.profile, ...(saved.profile || {}) },
+        schedule: { "1": {}, "2": {}, ...(saved.schedule || {}) } } : structuredClone(DEFAULT);
+    } catch (_) { return structuredClone(DEFAULT); }
   }
-
-  let data = loadData();
-
   function save() {
-    localStorage.setItem(KEY, JSON.stringify(data));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    catch (_) { alert("Не удалось сохранить данные. Возможно, для фото профиля слишком велик файл."); }
   }
-
-  function applyTheme(theme) {
-    document.body.classList.toggle("dark", theme === "dark");
-    document.querySelector("#themeButton").textContent =
-      theme === "dark" ? "Включить светлую тему" : "Включить чёрную тему";
-    localStorage.setItem(THEME_KEY, theme);
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+  const dateInput = document.getElementById("selectedDate");
+  dateInput.value = todayISO();
 
-  applyTheme(localStorage.getItem(THEME_KEY) || "light");
-
-  document.querySelector("#themeButton").addEventListener("click", () => {
-    applyTheme(document.body.classList.contains("dark") ? "light" : "dark");
-  });
+  function weekForDate(iso) {
+    const chosen = new Date(iso + "T12:00:00");
+    const anchor = new Date("2026-10-21T12:00:00"); // среда второй недели
+    const chosenMonday = new Date(chosen);
+    chosenMonday.setDate(chosen.getDate() - ((chosen.getDay() + 6) % 7));
+    const anchorMonday = new Date(anchor);
+    anchorMonday.setDate(anchor.getDate() - ((anchor.getDay() + 6) % 7));
+    const diffWeeks = Math.round((chosenMonday - anchorMonday) / 604800000);
+    return ((diffWeeks % 2 + 2) % 2) + 1;
+  }
+  function activeWeek() { return manualWeek || weekForDate(dateInput.value || todayISO()); }
+  function dateParts() {
+    const d = new Date((dateInput.value || todayISO()) + "T12:00:00");
+    return { date:d, day:d.getDay(), iso:dateInput.value || todayISO() };
+  }
+  function displayDay() {
+    const {date, day} = dateParts();
+    const formatted = new Intl.DateTimeFormat("ru-RU", { day:"numeric", month:"long", year:"numeric" }).format(date);
+    return { day, label: `${DAYS[day]}, ${formatted}` };
+  }
 
   function render() {
-    journals.replaceChildren();
-    const date = dateInput.value;
-
-    for (const discipline of disciplines) {
-      const card = document.createElement("section");
-      card.className = "discipline";
-
-      const heading = document.createElement("h3");
-      heading.textContent = discipline;
-      card.append(heading);
-
-      if (data.students.length === 0) {
-        const message = document.createElement("small");
-        message.textContent = "Сначала добавьте студентов выше.";
-        card.append(message);
-      }
-
-      for (const student of data.students) {
-        const row = document.createElement("div");
-        row.className = "student";
-
-        const studentName = document.createElement("span");
-        studentName.textContent = student.name;
-
-        const select = document.createElement("select");
-
-        for (const [value, label] of [
-          ["present", "Присутствовал"],
-          ["absent", "Отсутствовал"],
-          ["excused", "Уважительная причина"],
-          ["", "Не отмечено"]
-        ]) {
-          const option = document.createElement("option");
-          option.value = value;
-          option.textContent = label;
-          select.append(option);
-        }
-
-        const savedMark =
-          data.marks[date]?.[discipline]?.[student.id] || "";
-        select.value = savedMark;
-
-        select.addEventListener("change", () => {
-          data.marks[date] ||= {};
-          data.marks[date][discipline] ||= {};
-
-          if (select.value) {
-            data.marks[date][discipline][student.id] = select.value;
-          } else {
-            delete data.marks[date][discipline][student.id];
-          }
-
-          save();
-        });
-
-        row.append(studentName, select);
-        card.append(row);
-      }
-
-      journals.append(card);
-    }
+    document.body.classList.toggle("dark", data.theme === "dark");
+    document.getElementById("themeBtn").textContent = data.theme === "dark" ? "☀" : "☾";
+    document.querySelector('meta[name="theme-color"]').content = data.theme === "dark" ? "#111522" : "#f3f5f9";
+    const w = activeWeek();
+    document.querySelectorAll(".week-button").forEach(b => b.classList.toggle("active", Number(b.dataset.week) === w));
+    const {day, label} = displayDay();
+    document.getElementById("dateInfo").textContent = `Неделя ${w}`;
+    document.getElementById("dayHeading").textContent = `${label} · неделя ${w}`;
+    renderDaySubjects(w, day);
+    renderAttendance();
   }
 
-  document.querySelector("#addStudent").addEventListener("click", () => {
-    const input = document.querySelector("#name");
-    const name = input.value.trim();
-
-    if (!name) {
-      alert("Введите имя студента.");
+  function renderDaySubjects(week, day) {
+    const host = document.getElementById("daySubjects");
+    const entries = data.schedule[String(week)]?.[String(day)] || [];
+    if (!entries.length) {
+      host.innerHTML = '<div class="empty">На этот день расписание не заполнено. Откройте «Расписание», чтобы добавить занятия.</div>';
       return;
     }
-
-    data.students.push({
-      id: crypto.randomUUID(),
-      name
-    });
-
-    input.value = "";
-    save();
-    render();
-  });
-
-  dateInput.addEventListener("change", render);
-
-  document.querySelector("#export").addEventListener("click", () => {
-    const file = new Blob(
-      [JSON.stringify(data, null, 2)],
-      { type: "application/json" }
-    );
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(file);
-    link.download = "zhurnal-rezervnaya-kopiya.json";
-    link.click();
-    URL.revokeObjectURL(link.href);
-  });
-
-  document.querySelector("#import").addEventListener("change", async event => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      const imported = JSON.parse(await file.text());
-
-      if (!Array.isArray(imported.students) || typeof imported.marks !== "object") {
-        throw new Error("Неверный формат файла");
-      }
-
-      if (!confirm("Заменить текущий журнал данными из копии?")) return;
-
-      data = imported;
-      save();
+    host.innerHTML = entries.map(entry => {
+      const subject = data.subjects.find(s => s.id === entry.subjectId);
+      if (!subject) return "";
+      return `<button class="subject-button ${selectedSubjectId === subject.id ? "active" : ""}" data-subject="${escapeHtml(subject.id)}">
+        ${escapeHtml(subject.name)}${entry.group && entry.group !== "all" ? ` · ${entry.group} группа` : ""}
+      </button>`;
+    }).join("");
+    host.querySelectorAll("[data-subject]").forEach(button => button.addEventListener("click", () => {
+      selectedSubjectId = button.dataset.subject;
       render();
-      alert("Копия загружена.");
-    } catch {
-      alert("Не удалось загрузить файл. Выберите копию этого журнала.");
-    } finally {
-      event.target.value = "";
+    }));
+  }
+
+  function renderAttendance() {
+    const host = document.getElementById("attendanceList");
+    const subject = data.subjects.find(s => s.id === selectedSubjectId);
+    if (!subject) {
+      document.getElementById("attendanceHeading").textContent = "Выберите дисциплину";
+      host.className = "empty";
+      host.textContent = "Сначала выберите дисциплину выше.";
+      return;
     }
+    document.getElementById("attendanceHeading").textContent = `${subject.name} — ${dateInput.value}`;
+    host.className = "";
+    const {day} = dateParts();
+    const entry = (data.schedule[String(activeWeek())]?.[String(day)] || []).find(e => e.subjectId === subject.id);
+    const students = data.students.filter(s => !entry || entry.group === "all" || s.group === entry.group)
+      .sort((a,b) => a.surname.localeCompare(b.surname, "ru") || a.name.localeCompare(b.name, "ru"));
+    if (!students.length) {
+      host.innerHTML = '<div class="empty">Нет учеников для отображения. Добавьте учеников или проверьте группу занятия.</div>';
+      return;
+    }
+    const key = `${dateInput.value}|${subject.id}`;
+    const marks = data.attendance[key] || {};
+    host.innerHTML = students.map(student => `
+      <div class="student-row">
+        <div class="student-name">
+          <span class="surname">${escapeHtml(student.surname)}</span>
+          <span class="given">${escapeHtml(student.name)}</span>
+          <div class="group-tag">${student.group === "1" ? "1-я группа" : "2-я группа"}</div>
+        </div>
+        <select aria-label="Отметка для ${escapeHtml(student.surname)} ${escapeHtml(student.name)}" data-student="${escapeHtml(student.id)}">
+          <option value="" ${!marks[student.id] ? "selected" : ""}></option>
+          <option value="absent" ${marks[student.id] === "absent" ? "selected" : ""}>Отсутствовал</option>
+          <option value="excused" ${marks[student.id] === "excused" ? "selected" : ""}>По уважительной причине</option>
+        </select>
+      </div>`).join("");
+    host.querySelectorAll("select[data-student]").forEach(select => select.addEventListener("change", () => {
+      const studentId = select.dataset.student;
+      data.attendance[key] ||= {};
+      if (select.value) data.attendance[key][studentId] = select.value;
+      else delete data.attendance[key][studentId];
+      if (!Object.keys(data.attendance[key]).length) delete data.attendance[key];
+      save();
+    }));
+  }
+
+  dateInput.addEventListener("change", () => { manualWeek = null; selectedSubjectId = ""; render(); });
+  document.querySelectorAll(".week-button").forEach(button => button.addEventListener("click", () => {
+    manualWeek = Number(button.dataset.week);
+    selectedSubjectId = "";
+    render();
+  }));
+  document.getElementById("themeBtn").addEventListener("click", () => {
+    data.theme = data.theme === "dark" ? "light" : "dark"; save(); render();
   });
 
+  const backdrop = document.getElementById("modalBackdrop");
+  const title = document.getElementById("modalTitle");
+  const content = document.getElementById("modalContent");
+  function openModal(name, html) {
+    title.textContent = name; content.innerHTML = html; backdrop.classList.add("open");
+  }
+  function closeModal() { backdrop.classList.remove("open"); content.innerHTML = ""; }
+  document.getElementById("closeModal").addEventListener("click", closeModal);
+  backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
+
+  document.getElementById("profileBtn").addEventListener("click", () => {
+    openModal("Профиль", `
+      <form id="profileForm" class="form-stack">
+        <img class="avatar-preview" id="avatarPreview" src="${data.profile.photo || ""}" alt="Аватар" style="${data.profile.photo ? "" : "display:none"}">
+        <label>Фотография для аватара<input id="profilePhoto" type="file" accept="image/*"></label>
+        <label>ФИО<input id="profileName" value="${escapeHtml(data.profile.fullName)}" placeholder="Фамилия Имя Отчество"></label>
+        <label>Направление<input id="profileDirection" value="${escapeHtml(data.profile.direction)}" placeholder="Например, Прикладная информатика"></label>
+        <button class="tool-button primary" type="submit">Сохранить профиль</button>
+      </form>`);
+    let photo = data.profile.photo;
+    document.getElementById("profilePhoto").addEventListener("change", e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        photo = reader.result;
+        const preview = document.getElementById("avatarPreview");
+        preview.src = photo; preview.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById("profileForm").addEventListener("submit", e => {
+      e.preventDefault();
+      data.profile = {
+        photo,
+        fullName: document.getElementById("profileName").value.trim(),
+        direction: document.getElementById("profileDirection").value.trim()
+      };
+      save(); closeModal();
+      document.getElementById("profileBtn").textContent = data.profile.photo ? "🖼️" : "👤";
+    });
+  });
+
+  document.getElementById("addStudentBtn").addEventListener("click", () => {
+    openModal("Добавить ученика", `
+      <form id="studentForm" class="form-stack">
+        <label>Фамилия<input name="surname" required autocomplete="family-name"></label>
+        <label>Имя<input name="name" required autocomplete="given-name"></label>
+        <label>Группа<select name="group"><option value="1">Первая группа</option><option value="2">Вторая группа</option></select></label>
+        <button class="tool-button primary" type="submit">Добавить ученика</button>
+      </form>
+      <h3>Добавленные ученики</h3><div id="studentManageList"></div>`);
+    function fillManage() {
+      const box = document.getElementById("studentManageList");
+      if (!data.students.length) { box.innerHTML = '<div class="empty">Пока нет учеников.</div>'; return; }
+      box.innerHTML = data.students.map(s => `<div class="schedule-entry"><span>${escapeHtml(s.surname)} ${escapeHtml(s.name)} · ${s.group}-я группа</span><button class="small-button" data-delete-student="${escapeHtml(s.id)}">Удалить</button></div>`).join("");
+      box.querySelectorAll("[data-delete-student]").forEach(b => b.addEventListener("click", () => {
+        const id = b.dataset.deleteStudent;
+        if (!confirm("Удалить ученика и его отметки?")) return;
+        data.students = data.students.filter(s => s.id !== id);
+        Object.keys(data.attendance).forEach(k => {
+          if (data.attendance[k]) { delete data.attendance[k][id]; if (!Object.keys(data.attendance[k]).length) delete data.attendance[k]; }
+        });
+        save(); fillManage(); render();
+      }));
+    }
+    fillManage();
+    document.getElementById("studentForm").addEventListener("submit", e => {
+      e.preventDefault(); const f = new FormData(e.currentTarget);
+      data.students.push({ id: crypto.randomUUID(), surname: String(f.get("surname")).trim(), name: String(f.get("name")).trim(), group: String(f.get("group")) });
+      save(); e.currentTarget.reset(); fillManage(); render();
+    });
+  });
+
+  document.getElementById("addSubjectBtn").addEventListener("click", () => {
+    openModal("Добавить дисциплину", `
+      <form id="subjectForm" class="form-stack">
+        <label>Название дисциплины<input name="name" required placeholder="Например, Математика"></label>
+        <button class="tool-button primary" type="submit">Добавить дисциплину</button>
+      </form>
+      <h3>Дисциплины</h3><div id="subjectManageList"></div>`);
+    function fillSubjects() {
+      const box = document.getElementById("subjectManageList");
+      if (!data.subjects.length) { box.innerHTML = '<div class="empty">Пока нет дисциплин.</div>'; return; }
+      box.innerHTML = data.subjects.map(s => `<div class="schedule-entry"><span>${escapeHtml(s.name)}</span><button class="small-button" data-delete-subject="${escapeHtml(s.id)}">Удалить</button></div>`).join("");
+      box.querySelectorAll("[data-delete-subject]").forEach(b => b.addEventListener("click", () => {
+        const id = b.dataset.deleteSubject;
+        if (!confirm("Удалить дисциплину, её расписание и отметки?")) return;
+        data.subjects = data.subjects.filter(s => s.id !== id);
+        for (const week of ["1","2"]) for (const day of Object.keys(data.schedule[week])) {
+          data.schedule[week][day] = data.schedule[week][day].filter(e => e.subjectId !== id);
+        }
+        Object.keys(data.attendance).forEach(k => { if (k.split("|")[1] === id) delete data.attendance[k]; });
+        if (selectedSubjectId === id) selectedSubjectId = "";
+        save(); fillSubjects(); render();
+      }));
+    }
+    fillSubjects();
+    document.getElementById("subjectForm").addEventListener("submit", e => {
+      e.preventDefault(); const name = new FormData(e.currentTarget).get("name").toString().trim();
+      if (!name) return;
+      data.subjects.push({ id: crypto.randomUUID(), name });
+      save(); e.currentTarget.reset(); fillSubjects(); render();
+    });
+  });
+
+  document.getElementById("scheduleBtn").addEventListener("click", showSchedule);
+  function showSchedule() {
+    const w = activeWeek();
+    const dayOptions = DAYS.map((name, i) => `<option value="${i}">${name}</option>`).join("");
+    openModal("Расписание", `
+      <div class="week-row">
+        <button class="week-button ${w === 1 ? "active" : ""}" id="modalWeek1">Первая неделя</button>
+        <button class="week-button ${w === 2 ? "active" : ""}" id="modalWeek2">Вторая неделя</button>
+      </div>
+      <form id="scheduleForm" class="form-stack">
+        <label>День недели<select id="scheduleDay">${dayOptions}</select></label>
+        <label>Дисциплина<select id="scheduleSubject"></select></label>
+        <label>Для какой группы
+          <select id="scheduleGroup">
+            <option value="all">Вся группа</option><option value="1">Первая группа</option><option value="2">Вторая группа</option>
+          </select>
+        </label>
+        <button class="tool-button primary" type="submit">Добавить занятие</button>
+      </form>
+      <h3 id="scheduleListTitle"></h3><div id="scheduleList"></div>
+      <div class="notice">Сначала добавьте дисциплины. Чтобы убрать занятие из расписания, нажмите «Удалить» рядом с ним.</div>`);
+    let currentWeek = w;
+    const subjectSelect = document.getElementById("scheduleSubject");
+    function fillScheduleModal() {
+      subjectSelect.innerHTML = data.subjects.length
+        ? data.subjects.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join("")
+        : '<option value="">Сначала добавьте дисциплину</option>';
+      document.getElementById("modalWeek1").classList.toggle("active", currentWeek === 1);
+      document.getElementById("modalWeek2").classList.toggle("active", currentWeek === 2);
+      const day = document.getElementById("scheduleDay").value || "1";
+      document.getElementById("scheduleListTitle").textContent = `${currentWeek}-я неделя · ${DAYS[Number(day)]}`;
+      const box = document.getElementById("scheduleList");
+      const entries = data.schedule[String(currentWeek)]?.[day] || [];
+      if (!entries.length) { box.innerHTML = '<div class="empty">Занятий пока нет.</div>'; return; }
+      box.innerHTML = entries.map(e => {
+        const s = data.subjects.find(item => item.id === e.subjectId);
+        return `<div class="schedule-entry"><span>${escapeHtml(s?.name || "Удалённая дисциплина")}${e.group !== "all" ? ` · ${e.group}-я группа` : ""}</span><button class="small-button" data-remove-entry="${escapeHtml(e.id)}">Удалить</button></div>`;
+      }).join("");
+      box.querySelectorAll("[data-remove-entry]").forEach(b => b.addEventListener("click", () => {
+        data.schedule[String(currentWeek)][day] = entries.filter(e => e.id !== b.dataset.removeEntry);
+        save(); fillScheduleModal(); render();
+      }));
+    }
+    document.getElementById("modalWeek1").addEventListener("click", () => { currentWeek = 1; fillScheduleModal(); });
+    document.getElementById("modalWeek2").addEventListener("click", () => { currentWeek = 2; fillScheduleModal(); });
+    document.getElementById("scheduleDay").addEventListener("change", fillScheduleModal);
+    document.getElementById("scheduleForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const subjectId = subjectSelect.value;
+      if (!subjectId) { alert("Сначала добавьте дисциплину."); return; }
+      const day = document.getElementById("scheduleDay").value;
+      data.schedule[String(currentWeek)][day] ||= [];
+      data.schedule[String(currentWeek)][day].push({
+        id: crypto.randomUUID(),
+        subjectId,
+        group: document.getElementById("scheduleGroup").value
+      });
+      save(); fillScheduleModal(); render();
+    });
+    fillScheduleModal();
+  }
+
+  function download(filename, object) {
+    const blob = new Blob([JSON.stringify(object, null, 2)], { type:"application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function exportData(mode) {
+    const selected = dateInput.value;
+    let attendance = data.attendance;
+    if (mode === "date") {
+      attendance = Object.fromEntries(Object.entries(attendance).filter(([key]) => key.startsWith(selected + "|")));
+    } else if (mode === "month") {
+      const prefix = selected.slice(0, 7);
+      attendance = Object.fromEntries(Object.entries(attendance).filter(([key]) => key.startsWith(prefix)));
+    }
+    const label = mode === "date" ? selected : mode === "month" ? selected.slice(0,7) : "all";
+    download(`dgu-attendance-${label}.json`, {
+      exportedAt: new Date().toISOString(),
+      period: mode,
+      profile: data.profile,
+      students: data.students,
+      subjects: data.subjects,
+      schedule: data.schedule,
+      attendance
+    });
+  }
+  document.getElementById("exportMonth").addEventListener("click", () => exportData("month"));
+  document.getElementById("exportAll").addEventListener("click", () => exportData("all"));
+  document.getElementById("exportDate").addEventListener("click", () => exportData("date"));
+  document.getElementById("clearAll").addEventListener("click", () => {
+    if (!confirm("Удалить всех учеников, дисциплины, расписание, профиль и все отметки? Это действие нельзя отменить. Сначала сохраните резервную копию.")) return;
+    data = structuredClone(DEFAULT);
+    selectedSubjectId = ""; manualWeek = null;
+    save(); render();
+  });
+
+  if (data.profile.photo) document.getElementById("profileBtn").textContent = "🖼️";
   render();
+})();
 </script>
 </body>
 </html>
